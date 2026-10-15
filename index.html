@@ -1684,19 +1684,24 @@
             function solvePuzzle37(input) {
                 let [firstPart, molecule] = input.split('\n\n');
                 let replacements = firstPart.split('\n').map(line => line.split(' => '));
+                let newMolecules = [];
 
                 for (let i = 0; i < replacements.length; i++) {
                     let [from, to] = replacements[i];
                     let index = molecule.indexOf(from);
-                    if (index !== -1) {
-                        let newMolecule = molecule.slice(0, index) + to + molecule.slice(index + from.length);
-                        console.log(newMolecule, 'new molecule', index, from);
+
+                    while (index !== -1) {
+                        newMolecules.push(molecule.slice(0, index) + to + molecule.slice(index + from.length));
+                        index = molecule.indexOf(from, index + 1);
                     }
                 }
 
-                // console.log(replacements, 'part');
+                let uniqueNewMolecules = [...new Set(newMolecules)];
+                return uniqueNewMolecules.length;
+            }
+
+            function solvePuzzle38(input) {
                 
-                return 'test';
             }
 
             // --- UI elements ---
@@ -1836,6 +1841,8 @@
                     res = solvePuzzle36(val);
                 } else if (puzzleNumber === 37) {
                     res = solvePuzzle37(val);
+                } else if (puzzleNumber === 38) {
+                    res = solvePuzzle38(val);
                 } else {
                     res = solvePuzzle0(val);
                 }
