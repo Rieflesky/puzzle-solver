@@ -1,0 +1,1877 @@
+<?php
+?><!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Puzzle Solver — Advent of Code</title>
+    <style>
+        body {
+            font-family: Inter, system-ui, Segoe UI, Roboto, Arial;
+            margin: 24px;
+            background: #f7fafc;
+            color: #0f172a
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(2, 6, 23, .06)
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 140px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #e6e9ee;
+            border-radius: 6px;
+            resize: vertical
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 12px
+        }
+
+        button {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 0;
+            background: #0ea5a4;
+            color: #fff;
+            cursor: pointer
+        }
+
+        button.secondary {
+            background: #64748b
+        }
+
+        .result {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 6px;
+            background: #f1f5f9
+        }
+
+        pre {
+            white-space: pre-wrap;
+            background: #0b1220;
+            color: #dbeafe;
+            padding: 12px;
+            border-radius: 6px;
+            overflow: auto
+        }
+
+        .small {
+            font-size: 13px;
+            color: #334155
+        }
+
+        .trace {
+            max-height: 260px;
+            overflow: auto;
+            border: 1px solid #e6e9ee;
+            padding: 8px;
+            border-radius: 6px;
+            background: #fff
+        }
+
+        label {
+            font-weight: 600
+        }
+
+        .page-head {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .page-head h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .puzzle-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1f5f9;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #e6e9ee;
+        }
+
+        .puzzle-selector input[type="number"] {
+            width: 64px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-weight: 600;
+            text-align: center;
+            background: white;
+        }
+
+        .puzzle-selector label {
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .btn-spinner {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-spinner .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-top-color: rgba(255,255,255,0.95);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* disabled style (optional, you already have disabled look from browser) */
+        /* button[disabled] { opacity: 0.7; cursor: not-allowed; } */
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="page-head">
+            <h1>Puzzle solver</h1>
+
+            <div class="puzzle-selector" role="group" aria-label="Choose puzzle">
+                <label for="puzzleNumber">Puzzle</label>
+                <input id="puzzleNumber" type="number" min="0" autofocus/>
+            </div>
+        </div>
+
+        <label for="puzzle">Puzzle input</label>
+        <textarea id="puzzle" placeholder="Paste your puzzle input here (string)"></textarea>
+
+        <div class="row">
+            <button id="solveBtn">Solve</button>
+            <button id="clearBtn" class="secondary">Clear</button>
+            <button id="copyBtn" class="secondary" style="display:none">Copy</button>
+            <a href="https://adventofcode.com" target="_blank" class="secondary">
+                <button type="button">Open Advent of Code</button>
+            </a>
+        </div>
+
+        <div id="out" class="result" style="display:none">
+            <div><strong>Answer:</strong> <span id="resultText"></span></div>
+            <div class="small" id="extraInfo" style="margin-top:8px"></div>
+
+            <div id="traceWrap" style="margin-top:12px;display:none">
+                <label>Trace (first 2000 steps)</label>
+                <div class="trace" id="traceContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
+    <script>
+        $(document).ready(function () {
+
+            // test anything
+            function solvePuzzle0(input) {
+                // let a = { x: 1, y: 2 };
+                // let b = { ...a };
+                // let c = a;
+
+                // a.x = 99;
+                // console.log(a.x, b.x, c.x);
+
+                let arr = [1, 2, 3];
+                let copy = [...arr];
+                const direct = arr;
+
+                // copy.push(4);
+                arr.push(4);
+                // console.log(arr, copy, direct);
+            }
+
+            // --- Core solver functions ---
+            function solvePuzzle1(input) {
+                let floor = 0;
+                for (let i = 0; i < input.length; i++) {
+                    const ch = input[i];
+                    if (ch === '(') floor++;
+                    else if (ch === ')') floor--;
+                }
+                return floor;
+            }
+
+            function solvePuzzle2(input) {
+                let balance = 0;
+                for (let i = 0; i < input.length; i++) {
+                    const ch = input[i];
+                    if (ch === '(') balance++;
+                    else if (ch === ')') balance--;
+
+                    if (balance < 0) {
+                        return i + 1;
+                    }
+                }
+                return "never reach basement";
+            }
+
+            function solvePuzzle3(input) {
+                let lines = input.split('\n');
+                let totalPaper = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    console.log(lines[i]);
+                    let number = lines[i].split('x');
+                    console.log(number, number[0]);
+
+                    // surface area
+                    let surface = (number[0]*number[1] + number[1]*number[2] + number[2]*number[0])*2
+                    console.log('surface', surface);
+
+                    // smallest area
+                    let smallest = number[0]*number[1];
+                    if (number[1]*number[2] < number[0]*number[1]) {
+                        smallest = number[1]*number[2];
+                        if (number[2]*number[0] < number[1]*number[2]) {
+                            smallest = number[2]*number[0];
+                        }
+                    } else if (number[2]*number[0] < number[0]*number[1]) {
+                        smallest = number[2]*number[0];
+                    }
+                    console.log('smallest', smallest);
+
+                    // total Paper
+                    totalPaper += surface + smallest;
+                    console.log('totalPaper', totalPaper);
+                }
+                return totalPaper;
+            }
+
+            function solvePuzzle4(input) {
+                let lines = input.split('\n');
+                let totalLength = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    let number = lines[i].split('x').map(Number);
+                    console.log(number, number[0]);
+
+                    // smallest perimeter
+                    let smallest = number[0]+number[1];
+                    if (number[1]+number[2] < number[0]+number[1]) {
+                        smallest = number[1]+number[2];
+                        if (number[2]+number[0] < number[1]+number[2]) {
+                            smallest = number[2]+number[0];
+                        }
+                    } else if (number[2]+number[0] < number[0]+number[1]) {
+                        smallest = number[2]+number[0];
+                    }
+                    smallest *= 2;
+                    console.log('smallest', smallest);
+
+                    // ribbon
+                    let ribbon = number[0]*number[1]*number[2];
+                    console.log('ribbon', ribbon);
+
+                    // total Length
+                    totalLength += ribbon + smallest;
+                    console.log('totalLength', totalLength);
+                }
+                return totalLength;
+            }
+
+            function solvePuzzle5(input) {
+                let grid = new Map();
+                let x=0;
+                let y=0;
+                grid.set(`${x},${y}`, 1);
+                let visitedHouse = 1;
+                for (let i = 0; i < input.length; i++) {
+                    const ch = input[i];
+                    if (ch === '^') y++;
+                    else if (ch === '>') x++;
+                    else if (ch === '<') x--;
+                    else if (ch === 'v') y--;
+
+                    if (grid.get(`${x},${y}`) != 1) {
+                        grid.set(`${x},${y}`, 1);
+                        visitedHouse++;
+                    }
+                }
+                return visitedHouse;
+            }
+
+            function solvePuzzle6(input) {
+                let grid = new Map();
+                let x=0,y=0,a=0,b=0;
+                grid.set(`${x},${y}`, 1);
+                let visitedHouse = 1;
+                let turn = 1;
+                for (let i = 0; i < input.length; i++) {
+                    console.log(turn);
+                    const ch = input[i];
+                    if (ch === '^' && turn === 1) {
+                        y++;
+                    }
+                    else if (ch === '>' && turn === 1) {
+                        x++;
+                    }
+                    else if (ch === '<' && turn === 1) {
+                        x--;
+                    }
+                    else if (ch === 'v' && turn === 1) {
+                        y--;
+                    }
+                    else if (ch === '^' && turn === 0) {
+                        b++;
+                    }
+                    else if (ch === '>' && turn === 0) {
+                        a++;
+                    }
+                    else if (ch === '<' && turn === 0) {
+                        a--;
+                    }
+                    else if (ch === 'v' && turn === 0) {
+                        b--;
+                    }
+
+                    console.log(x,y,a,b,visitedHouse);
+
+                    if (grid.get(`${x},${y}`) != 1 && turn === 1) {
+                        grid.set(`${x},${y}`, 1);
+                        visitedHouse++;
+                    } else if (grid.get(`${a},${b}`) != 1 && turn === 0) {
+                        grid.set(`${a},${b}`, 1);
+                        visitedHouse++;
+                    }
+
+                    turn = i%2;
+                }
+                return visitedHouse;
+            }
+
+            function solvePuzzle7(input) {
+                let number = 1;
+                const prefix = '0'.repeat(5);
+                for (let i = 0; i < 10000000; i++) {
+                    let ans = SparkMD5.hash(input + i);
+                    if (ans.startsWith(prefix)) {
+                        return i;
+                    }
+                }
+                return i;
+            }
+
+            function solvePuzzle8(input) {
+                let number = 1;
+                const prefix = '0'.repeat(6);
+                for (let i = 0; i < 10000000; i++) {
+                    let ans = SparkMD5.hash(input + i);
+                    if (ans.startsWith(prefix)) {
+                        return i;
+                    }
+                }
+                return i;
+            }
+
+            function solvePuzzle9(input) {
+                let lines = input.split('\n');
+                let nice = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    let vow = 0;
+                    let row = 0;
+                    let odd = 1;
+
+                    for (let j = 0; j < lines[i].length; j++) {
+                        if ('aeiou'.includes(lines[i][j])) {
+                            vow++;
+                        }
+
+                        if (lines[i][j] === lines[i][j+1]) {
+                            row = 1;
+                        }
+
+                        if (['ab', 'cd', 'pq', 'xy'].some(b => lines[i].includes(b))) {
+                            odd = 0;      
+                        }
+
+                        if (vow >= 3 && row == 1 && odd == 1) {
+                            nice++;
+                            break;
+                        }
+                    }
+                }
+                return nice;
+            }
+
+            function solvePuzzle10(input) {
+                let lines = input.split('\n');
+                let nice = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    let pair = 0;
+                    let repeat = 0;
+
+                    for (let j = 0; j < lines[i].length; j++) {
+                        for (let k = j+2; k < lines[i].length; k++) {
+                            if (lines[i][j]+lines[i][j+1] === lines[i][k]+lines[i][k+1]) {
+                                console.log(lines[i][j]+lines[i][j+1], lines[i][k]+lines[i][k+1]);
+                                pair = 1;
+                                break;
+                            }
+                        }
+
+                        if (lines[i][j] == lines[i][j+2]) {
+                            console.log(lines[i][j]+lines[i][j+1]+lines[i][j+2])
+                            repeat = 1;
+                        }
+
+                        if (pair === 1 && repeat === 1) {
+                            nice++;
+                            console.log('nice', lines[i]);
+                            break;
+                        }
+                    }
+                }
+                return nice;
+            }
+
+            function solvePuzzle11(input) {
+                let lines = input.split('\n');
+                let lit = 0;
+                let lights = Array.from({length: 1000}, () => Array(1000).fill(0));
+                
+                for (let line of lines) {
+                    const nums = line.match(/\d+/g).map(n => parseInt(n, 10));
+                    const [x1, y1, x2, y2] = nums;
+
+                    for (let i = x1; i <= x2; i++) {
+                        for (let j = y1; j <= y2; j++) {
+                            if (line.startsWith('toggle')) {
+                                lights[i][j] = (lights[i][j]+1)%2;
+                            } else if (line.startsWith('turn on')) {
+                                lights[i][j] = 1;
+                            } else if (line.startsWith('turn off')) {
+                                lights[i][j] = 0;
+                            }
+                        }
+                    }
+                }
+
+                for (let i = 0; i < 1000; i++) {
+                    for (let j = 0; j < 1000; j++) {
+                        if (lights[i][j] === 1) {
+                            lit++;
+                        } 
+                    }
+                }
+                return lit;
+            }
+
+            function solvePuzzle12(input) {
+                let lines = input.split('\n');
+                let totalBrightness = 0;
+                let lights = Array.from({length: 1000}, () => Array(1000).fill(0));
+                
+                for (let line of lines) {
+                    const nums = line.match(/\d+/g).map(n => parseInt(n, 10));
+                    const [x1, y1, x2, y2] = nums;
+
+                    for (let i = x1; i <= x2; i++) {
+                        for (let j = y1; j <= y2; j++) {
+                            if (line.startsWith('toggle')) {
+                                lights[i][j] += 2;
+                            } else if (line.startsWith('turn on')) {
+                                lights[i][j]++;
+                            } else if (line.startsWith('turn off')) {
+                                lights[i][j] = Math.max(lights[i][j]-1, 0);
+                            }
+                        }
+                    }
+                }
+
+                for (let i = 0; i < 1000; i++) {
+                    for (let j = 0; j < 1000; j++) {
+                        totalBrightness += lights[i][j];
+                    }
+                }
+                return totalBrightness;
+            }
+
+            function solvePuzzle13(input) {
+                const lines = input.trim().split(/\r?\n/);
+                // console.log('lines', lines);
+                const instr = new Map();
+
+                // store expressions by target wire
+                for (const line of lines) {
+                    const [left, right] = line.split('->').map(s => s.trim());
+                    // console.log(left, right);
+                    instr.set(right, left);
+                }
+
+                const cache = new Map();
+
+                function isNumber(s) {
+                    // console.log(/^\d+$/.test(s), s);
+                    return /^\d+$/.test(s);
+                }
+
+                function getVal(token) {
+                    if (isNumber(token)) return Number(token) & 0xFFFF;
+                    return evaluate(token);
+                }
+
+                function evaluate(wire) {
+                    // numeric literal requested directly
+                    if (isNumber(wire)) return Number(wire) & 0xFFFF;
+
+                    console.log(cache.has(wire), wire, cache.get(wire));
+                    if (cache.has(wire)) return cache.get(wire);
+
+                    const expr = instr.get(wire);
+                    console.log(expr, wire);
+                    if (expr === undefined) {
+                        // if a wire was referenced but not assigned in the input
+                        throw new Error(`No instruction for wire "${wire}"`);
+                    }
+
+                    let val;
+
+                    // Patterns:
+                    // NOT x
+                    // x AND y
+                    // x OR y
+                    // x LSHIFT n
+                    // x RSHIFT n
+                    // direct value or copy: "123" or "lx" style
+                    let m;
+                    if ((m = expr.match(/^NOT\s+(\w+)$/))) {
+                        val = (~getVal(m[1])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+AND\s+(\w+)$/))) {
+                        val = (getVal(m[1]) & getVal(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+OR\s+(\w+)$/))) {
+                        console.log((m = expr.match(/^(\w+)\s+OR\s+(\w+)$/)));
+                        val = (getVal(m[1]) | getVal(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+LSHIFT\s+(\d+)$/))) {
+                        val = (getVal(m[1]) << Number(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+RSHIFT\s+(\d+)$/))) {
+                        val = (getVal(m[1]) >>> Number(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\d+)$/)) || (m = expr.match(/^(\w+)$/))) {
+                        // literal or wire copy
+                        // console.log(m[1], expr.match(/^(\w+)$/), expr.match(/\w+$/));
+                        val = getVal(m[1]);
+                    } else {
+                        throw new Error(`Unknown expression: "${expr}" for wire "${wire}"`);
+                    }
+
+                    // console.log(wire, val);
+                    cache.set(wire, val);
+                    return val;
+                }
+
+                return evaluate('a');
+            }
+
+            function solvePuzzle14(input) {
+                const lines = input.trim().split(/\r?\n/);
+                // console.log('lines', lines);
+                const instr = new Map();
+
+                for (const line of lines) {
+                    const [left, right] = line.split('->').map(s => s.trim());
+                    // console.log(left, right);
+                    if (right === 'b') {
+                        instr.set(right, '16076');
+                    } else {
+                        instr.set(right, left);
+                    }
+                }
+
+                const cache = new Map();
+
+                function isNumber(s) {
+                    // console.log(/^\d+$/.test(s), s);
+                    return /^\d+$/.test(s);
+                }
+
+                function getVal(token) {
+                    if (isNumber(token)) return Number(token) & 0xFFFF;
+                    return evaluate(token);
+                }
+
+                function evaluate(wire) {
+                    // numeric literal requested directly
+                    if (isNumber(wire)) return Number(wire) & 0xFFFF;
+
+                    console.log(cache.has(wire), wire, cache.get(wire));
+                    if (cache.has(wire)) return cache.get(wire);
+
+                    const expr = instr.get(wire);
+                    console.log(expr, wire);
+                    if (expr === undefined) {
+                        // if a wire was referenced but not assigned in the input
+                        throw new Error(`No instruction for wire "${wire}"`);
+                    }
+
+                    let val;
+                    let m;
+                    if ((m = expr.match(/^NOT\s+(\w+)$/))) {
+                        val = (~getVal(m[1])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+AND\s+(\w+)$/))) {
+                        val = (getVal(m[1]) & getVal(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+OR\s+(\w+)$/))) {
+                        console.log((m = expr.match(/^(\w+)\s+OR\s+(\w+)$/)));
+                        val = (getVal(m[1]) | getVal(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+LSHIFT\s+(\d+)$/))) {
+                        val = (getVal(m[1]) << Number(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\w+)\s+RSHIFT\s+(\d+)$/))) {
+                        val = (getVal(m[1]) >>> Number(m[2])) & 0xFFFF;
+                    } else if ((m = expr.match(/^(\d+)$/)) || (m = expr.match(/^(\w+)$/))) {
+                        // literal or wire copy
+                        // console.log(m[1], expr.match(/^(\w+)$/), expr.match(/\w+$/));
+                        val = getVal(m[1]);
+                    } else {
+                        throw new Error(`Unknown expression: "${expr}" for wire "${wire}"`);
+                    }
+
+                    // console.log(wire, val);
+                    cache.set(wire, val);
+                    return val;
+                }
+
+                return evaluate('a');
+            }
+
+            function solvePuzzle15(input) {
+                let lines = input.split('\n');
+                let codeChar = 0;
+                let memoryChar = 0;
+
+                for (let line of lines) {
+                    codeChar+= line.length;
+                    for (let i = 0; i < line.length; i++) {
+                        if (line[i] === "\\" && line[i+1] === "\\") {
+                            // console.log(line[i], line[i+1])
+                            i++;
+                            memoryChar++;
+                        } else if (line[i] === "\\" && line[i+1] === "x") {
+                            i+=3
+                            memoryChar++;
+                        } else if (line[i] != '"') {
+                            memoryChar++;
+                        }
+                    }
+                }
+                // console.log(codeChar);
+                // console.log(memoryChar);
+                return codeChar - memoryChar;
+            }
+
+            function solvePuzzle16(input) {
+                let lines = input.split('\n');
+                let encodeChar = 0;
+                let codeChar = 0;
+
+                for (let line of lines) {
+                    codeChar+= line.length;
+                    encodeChar+= 2;
+                    for (let i = 0; i < line.length; i++) {
+                        if (line[i] === "\\") {
+                            encodeChar++;
+                        } else if (line[i] === '"') {
+                            encodeChar++;
+                        }
+                        encodeChar++;
+                    }
+                }
+                return encodeChar - codeChar;
+            }
+
+            function solvePuzzle17(input) {
+                let lines = input.split('\n');
+                let locDist = new Map();
+                const allLocations = [];
+                // let visitedLocation = new Map();
+
+                for (let line of lines) {
+                    let [loc, dist] = line.split(' = ');
+                    let [from, to] = loc.split(' to ');
+
+                    let numDist = Number(dist);
+
+                    locDist.set(`${from},${to}`, numDist);
+                    locDist.set(`${to},${from}`, numDist);
+
+                    if (!allLocations.includes(from)) {
+                        allLocations.push(from);
+                    }
+                    if (!allLocations.includes(to)) {
+                        allLocations.push(to);
+                    }
+                }
+                // console.log(allLocations, locDist);
+
+                let results = [];
+
+                function permute(temp, remaining) {
+                    if (remaining.length === 0) {
+                        results.push(temp);
+                        return;
+                    }
+                    for (let i = 0; i < remaining.length; i++) {
+                        permute(
+                            temp.concat(remaining[i]),
+                            remaining.slice(0, i).concat(remaining.slice(i + 1))
+                        );
+                    }
+                }
+
+                permute([], allLocations);
+
+                routes = results;
+
+                // console.log(results);
+
+                let bestRoute = null;
+                let bestDistance = Infinity;
+
+                routes.forEach(route => {
+                    let dist = 0;
+
+                    for (let i = 0; i < route.length - 1; i++) {
+                        dist += locDist.get(`${route[i]},${route[i+1]}`); 
+                    }
+
+                    if (dist < bestDistance) {
+                        bestDistance = dist;
+                        bestRoute = route;
+                    }
+                });
+
+                return bestDistance;
+            }
+
+            function solvePuzzle18(input) {
+                let lines = input.split('\n');
+                let locDist = new Map();
+                const allLocations = [];
+                // let visitedLocation = new Map();
+
+                for (let line of lines) {
+                    let [loc, dist] = line.split(' = ');
+                    let [from, to] = loc.split(' to ');
+
+                    let numDist = Number(dist);
+
+                    locDist.set(`${from},${to}`, numDist);
+                    locDist.set(`${to},${from}`, numDist);
+
+                    if (!allLocations.includes(from)) {
+                        allLocations.push(from);
+                    }
+                    if (!allLocations.includes(to)) {
+                        allLocations.push(to);
+                    }
+                }
+                // console.log(allLocations, locDist);
+
+                let results = [];
+
+                function permute(temp, remaining) {
+                    if (remaining.length === 0) {
+                        results.push(temp);
+                        return;
+                    }
+                    for (let i = 0; i < remaining.length; i++) {
+                        permute(
+                            temp.concat(remaining[i]),
+                            remaining.slice(0, i).concat(remaining.slice(i + 1))
+                        );
+                    }
+                }
+
+                permute([], allLocations);
+
+                routes = results;
+
+                // console.log(results);
+
+                let longgestRoute = null;
+                let longgestDistance = 0;
+
+                routes.forEach(route => {
+                    let dist = 0;
+
+                    for (let i = 0; i < route.length - 1; i++) {
+                        dist += locDist.get(`${route[i]},${route[i+1]}`); 
+                    }
+
+                    if (dist > longgestDistance) {
+                        longgestDistance = dist;
+                        longgestRoute = route;
+                    }
+                });
+
+                return longgestDistance;
+            }
+
+            function solvePuzzle19(input) {
+                for (let h = 0; h < 40; h++) {
+                    let count = 1;
+                    let lookNumber = "";
+                    for (let i = 0; i < input.length; i++) {
+                        if(input[i] === input[i+1]) {
+                            count++;
+                        } else if (input[i] != input[i+1]) {
+                            lookNumber+=count;
+                            lookNumber+=input[i];
+                            count = 1;
+                        }
+                    }
+                    // totalLength+=lookNumber.length;
+                    console.log(input);
+                    console.log(lookNumber);
+                    input = lookNumber;
+                }
+                let resultLength = input.length;
+                return resultLength;
+            }
+
+            function solvePuzzle20(input) {
+                for (let h = 0; h < 50; h++) {
+                    let count = 1;
+                    let lookNumber = "";
+                    for (let i = 0; i < input.length; i++) {
+                        if(input[i] === input[i+1]) {
+                            count++;
+                        } else if (input[i] != input[i+1]) {
+                            lookNumber+=count;
+                            lookNumber+=input[i];
+                            count = 1;
+                        }
+                    }
+                    input = lookNumber;
+                }
+                let resultLength = input.length;
+                return resultLength;
+            }
+
+            function solvePuzzle21(input) {
+                let password = input.split('');
+                let i = input.length-1;
+                let loop = true;
+                while (loop) {
+                    if(password[i] === 'z') {
+                        password[i] = 'a';
+                        let j = i-1;
+                        while (password[j] === 'z') {
+                            password[j] = 'a';
+                            j--;
+                        }
+                        password[j] = String.fromCharCode(password[j].charCodeAt(0) + 1);
+                    } else {
+                        password[i] = String.fromCharCode(password[i].charCodeAt(0) + 1);
+                    }
+
+                    let increaseStraight = false;
+                    for (let k = 0; k < password.length-2; k++) {
+                        if (password[k].charCodeAt(0) === password[k+1].charCodeAt(0)-1 && password[k].charCodeAt(0) === password[k+2].charCodeAt(0)-2) {
+                            increaseStraight = true;
+                            break;
+                        }
+                    }
+
+                    let smellyLetter = true
+                    if (['i', 'o', 'l'].some(b => password.includes(b))) {
+                        smellyLetter = false;      
+                    }
+
+                    let sameLetter = false;
+                    let sameLetterCount = 0;
+                    for (let k = 0; k < password.length; k++) {
+                        if (password[k] === password[k+1]) {
+                            sameLetterCount++;
+                            if (sameLetterCount >= 2) {
+                                sameLetter = true;
+                                break;
+                            }
+                            k++;
+                        }
+                    }
+                    // console.log(password.join(''), increaseStraight, smellyLetter, sameLetter);
+
+                    if (increaseStraight && smellyLetter && sameLetter) {
+                        loop = false;
+                    }
+
+                    if (password[2] === 'l') {
+                        loop = false;
+                        return 'stop'; // safe trigger
+                    }
+                }
+                // console.log(password.join(''));
+                return password.join('');
+            }
+
+            function solvePuzzle22(input) {
+                console.log('look at 21');
+            }
+
+            function solvePuzzle23(input) {
+                let arrNumber = input.match(/-?\d+/g).map(Number);
+                let totalNumber = 0;
+                for (let i = 0; i < arrNumber.length; i++) {
+                    totalNumber+=arrNumber[i];
+                }
+
+                console.log(arrNumber, input, arrNumber.length, arrNumber[1]);
+                return totalNumber;
+            }
+
+            function solvePuzzle24(input) {
+                data = JSON.parse(input);
+
+                function sumValue(node) {
+                    if (typeof node === 'number') {
+                        return node;
+                    }
+
+                    if (Array.isArray(node)) {
+                        // sum array elements (arrays are never ignored for "red")
+                        let s = 0;
+                        for (let item of node) s += sumValue(item);
+                        return s;
+                    }
+
+                    if (node && typeof node === 'object') {
+                        // If any property value is the string "red", ignore the whole object
+                        for (const key in node) {
+                            if (Object.prototype.hasOwnProperty.call(node, key)) {
+                                if (node[key] === 'red') {
+                                    return 0;
+                                }
+                            }
+                        }
+                        // otherwise sum its property values
+                        let s = 0;
+                        for (const key in node) {
+                            if (Object.prototype.hasOwnProperty.call(node, key)) {
+                                s += sumValue(node[key]);
+                            }
+                        }
+                        return s;
+                    }
+
+                    // other types (boolean, null, undefined) -> 0
+                    return 0;
+
+                }
+
+                let total = sumValue(data);
+                return total;
+            }
+
+            function solvePuzzle25(input) {
+                let lines = input.split('\n');
+                let personPointNeighbor = new Map();
+                let allPerson = [];
+
+                for (let line of lines) {
+                    let [personPoint, neighbor] = line.split(' happiness units by sitting next to ');
+                    let [person, point] = personPoint.split(' would ');
+
+                    if (!allPerson.includes(person)) {
+                        allPerson.push(person);
+                    }
+
+                    const digit = point.match(/(\d+)/);
+                    const number = Number(digit[1]);
+                    let happinessUnit = point.startsWith('lose') ? -number : number;
+
+                    neighbor = neighbor.replace(/\./, '');
+
+                    personPointNeighbor.set(`${person},${neighbor}`, happinessUnit);
+                    // console.log(personPointNeighbor.get(`${person},${neighbor}`), person, neighbor);
+                }
+
+                let patterns = [];
+
+                function permute(temp, remaining) {
+                    if (remaining.length === 0) {
+                        patterns.push(temp);
+                        return;
+                    }
+                    for (let i = 0; i < remaining.length; i++) {
+                        permute(
+                            temp.concat(remaining[i]),
+                            remaining.slice(0, i).concat(remaining.slice(i + 1))
+                        );
+                    }
+                }
+
+                permute([], allPerson);
+
+                let highestHappiness = 0;
+                patterns.forEach(pattern => {
+                    let happiness = 0;
+                    for (let i = 0; i < pattern.length; i++) {
+                        if (i === 0) {
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i+1]}`);
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[pattern.length-1]}`);
+                            // console.log('first', happiness);
+                        } else if (i === pattern.length-1) {
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[0]}`);
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i-1]}`);
+                            // console.log('last', happiness);
+                        } else {
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i+1]}`);
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i-1]}`);
+                            // console.log('else', happiness);
+                        }
+                        // console.log('happiness', happiness);
+                    }
+
+                    if (happiness > highestHappiness) {
+                        highestHappiness = happiness;
+                    }
+                    // console.log(pattern, happiness, highestHappiness);
+                });
+                return highestHappiness;
+            }
+
+            function solvePuzzle26(input) {
+                let lines = input.split('\n');
+                let personPointNeighbor = new Map();
+                let allPerson = [];
+
+                for (let line of lines) {
+                    let [personPoint, neighbor] = line.split(' happiness units by sitting next to ');
+                    let [person, point] = personPoint.split(' would ');
+
+                    if (!allPerson.includes(person)) {
+                        allPerson.push(person);
+                    }
+
+                    const digit = point.match(/(\d+)/);
+                    const number = Number(digit[1]);
+                    let happinessUnit = point.startsWith('lose') ? -number : number;
+
+                    neighbor = neighbor.replace(/\./, '');
+
+                    personPointNeighbor.set(`${person},${neighbor}`, happinessUnit);
+                    // console.log(personPointNeighbor.get(`${person},${neighbor}`), person, neighbor);
+                }
+
+                let patterns = [];
+
+                function permute(temp, remaining) {
+                    if (remaining.length === 0) {
+                        patterns.push(temp);
+                        return;
+                    }
+                    for (let i = 0; i < remaining.length; i++) {
+                        permute(
+                            temp.concat(remaining[i]),
+                            remaining.slice(0, i).concat(remaining.slice(i + 1))
+                        );
+                    }
+                }
+
+                permute([], allPerson);
+
+                let highestHappiness = 0;
+                patterns.forEach(pattern => {
+                    let happiness = 0;
+                    for (let i = 0; i < pattern.length; i++) {
+                        if (i === 0) {
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i+1]}`);
+                            // console.log('first', happiness);
+                        } else if (i === pattern.length-1) {
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i-1]}`);
+                            // console.log('last', happiness);
+                        } else {
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i+1]}`);
+                            happiness += personPointNeighbor.get(`${pattern[i]},${pattern[i-1]}`);
+                            // console.log('else', happiness);
+                        }
+                        // console.log('happiness', happiness);
+                    }
+
+                    if (happiness > highestHappiness) {
+                        highestHappiness = happiness;
+                    }
+                    // console.log(pattern, happiness, highestHappiness);
+                });
+                return highestHappiness;
+            }
+
+            function solvePuzzle27(input) { //2503
+                let lines = input.split('\n');
+                let run = 1;
+                let highestTravelDistance = 0;
+                
+                for (let line of lines) {
+                    let [reindeerDistance, rest] = line.split(' seconds, but then must rest for ');
+                    let [reindeer, speedLimit] = reindeerDistance.split(' can fly ');
+                    let [speed, limit] = speedLimit.split(' km/s for ').map(Number);
+                    let travelDistance = 0;
+                    let race = 2503;
+
+                    rest = Number(rest.replace(/\ seconds./, ''));
+                    console.log(reindeer, speed, limit, rest);
+
+                    while (race > 0) {
+                        console.log(race, run);
+                        if (run === 1) {
+                            if (limit > race) {
+                                travelDistance += speed*race;
+                            } else {
+                                travelDistance += speed*limit;
+                            }
+                            race -= limit;
+                        } else if (run === 0) {
+                            race -= rest;
+                        }
+                        console.log('distance', travelDistance);
+
+                        run = (run+1)%2;
+                    }
+
+                    if (highestTravelDistance < travelDistance) {
+                        highestTravelDistance = travelDistance;
+                    }
+                }
+
+                return highestTravelDistance;
+            }
+
+            function solvePuzzle28(input) { //2503
+                let lines = input.split('\n');
+                let racer = new Map();
+                let allReindeer = [];
+                let highestPoint = 0;
+                
+                for (let line of lines) {
+                    let [reindeerDistance, rest] = line.split(' seconds, but then must rest for ');
+                    let [name, speedLimit] = reindeerDistance.split(' can fly ');
+                    let [speed, limit] = speedLimit.split(' km/s for ').map(Number);
+                    let race = 2503;
+
+                    rest = Number(rest.replace(/\ seconds./, ''));
+                    racer.set(name, {
+                        speed: speed,
+                        limit: limit,
+                        rest: rest,
+                        run: 1,
+                        runTime: 0,
+                        restTime: 0,
+                        point: 0,
+                        distance: 0,
+                    });
+                    allReindeer.push(name);
+                }
+
+                for (let i = 0; i < 2503; i++ ) {
+                    let leads = [];
+                    let highestDistance = 0;
+                    // console.log(`${i+1} seconds`);
+                    // console.log('1', racer);
+                    for (let reindeer of allReindeer) {
+                        let racerReindeer = racer.get(reindeer);
+                        let run = racerReindeer.run;
+                        let speed = racerReindeer.speed;
+
+                        if (run === 1) {
+                            racerReindeer.distance += speed;
+                            racerReindeer.runTime++;
+                        } else if (run === 0) {
+                            racerReindeer.restTime++;
+                        }
+
+                        if (racerReindeer.runTime === racerReindeer.limit) {
+                            racerReindeer.run = 0;
+                            racerReindeer.runTime = 0;
+                        } else if (racerReindeer.restTime === racerReindeer.rest) {
+                            racerReindeer.run = 1;
+                            racerReindeer.restTime = 0;
+                        }
+
+                        let distance = racerReindeer.distance;
+                        if (distance > highestDistance) {
+                            highestDistance = distance;
+                            leads = [];
+                            leads.push(reindeer);
+                        }else if (distance === highestDistance) {
+                            leads.push(reindeer);
+                        }
+                    }
+
+                    for (let lead of leads) {
+                        racer.get(lead).point++;
+                        // console.log(`lead ${lead} with ${racer.get(lead).point} point`, racer.get(lead).distance);
+                    }
+                }
+
+                for (let reindeer of allReindeer) {
+                    let point = racer.get(reindeer).point;
+                    if (point > highestPoint) {
+                        highestPoint = point;
+                    }
+                }
+
+                return highestPoint;
+            }
+
+            function solvePuzzle29(input) {
+                let lines = input.split('\n');
+                let recipe = new Map();
+                let allIngredient = [];
+                let allProperties = ['capacity', 'durability', 'flavor', 'texture'];
+                let bestPoint = 0;
+
+                for (let line of lines) {
+                    let [name, rest] = line.split(': ');
+                    let nums = rest.match(/-?\d+/g).map(Number);
+
+                    allIngredient.push(name);
+
+                    recipe.set(name, {
+                        capacity: nums[0],
+                        durability: nums[1],
+                        flavor: nums[2],
+                        texture: nums[3],
+                    });
+                }
+
+                function combo(allIngredient) {
+                    let result = [];
+                    function backtrack(index, remaining, current) {
+                        if (index === allIngredient.length-1) {
+                            current[allIngredient[index]] = remaining;
+                            result.push({ ...current });
+                            return;
+                        }
+
+                        for (let i = 0; i <= remaining; i++) {
+                            current[allIngredient[index]] = i;
+                            backtrack(index+1, remaining-i, current);
+                        }
+                    }
+
+                    backtrack(0, 100, {});
+                    return result;
+                }
+
+                let combos = combo(allIngredient);
+                let highestScore = 0;
+                combos.forEach(combo => {
+                    let score = 1;
+                    allProperties.forEach(properties => {
+                        let totalIngredientPoint = 0;
+                        allIngredient.forEach(ingredient => {
+                            // console.log(combo[ingredient], recipe.get(ingredient)[properties]);
+                            totalIngredientPoint += combo[ingredient]*recipe.get(ingredient)[properties];
+                        });
+                        totalIngredientPoint = Math.max(totalIngredientPoint, 0);
+                        score *= totalIngredientPoint;
+                    });
+
+                    if (score > highestScore) {
+                        highestScore = score;
+                    }
+                    // console.log(combo);
+                });
+                return highestScore;
+            }
+
+            function solvePuzzle30(input) {
+                let lines = input.split('\n');
+                let recipe = new Map();
+                let allIngredient = [];
+                let allProperties = ['capacity', 'durability', 'flavor', 'texture', 'calories'];
+                let bestPoint = 0;
+
+                for (let line of lines) {
+                    let [name, rest] = line.split(': ');
+                    let nums = rest.match(/-?\d+/g).map(Number);
+
+                    allIngredient.push(name);
+
+                    recipe.set(name, {
+                        capacity: nums[0],
+                        durability: nums[1],
+                        flavor: nums[2],
+                        texture: nums[3],
+                        calories: nums[4],
+                    });
+                }
+
+                function combo(allIngredient) {
+                    let result = [];
+                    function backtrack(index, remaining, current) {
+                        if (index === allIngredient.length-1) {
+                            current[allIngredient[index]] = remaining;
+                            result.push({ ...current });
+                            return;
+                        }
+
+                        for (let i = 0; i <= remaining; i++) {
+                            current[allIngredient[index]] = i;
+                            backtrack(index+1, remaining-i, current);
+                        }
+                    }
+
+                    backtrack(0, 100, {});
+                    return result;
+                }
+
+                let combos = combo(allIngredient);
+                let highestScore = 0;
+                combos.forEach(combo => {
+                    let score = 1;
+                    let totalCalory;
+                    allProperties.forEach(properties => {
+                        let totalIngredientPoint = 0;
+                        allIngredient.forEach(ingredient => {
+                            // console.log(combo[ingredient], recipe.get(ingredient)[properties]);
+                            totalIngredientPoint += combo[ingredient]*recipe.get(ingredient)[properties];
+                        });
+                        totalIngredientPoint = Math.max(totalIngredientPoint, 0);
+
+                        if (properties === 'calories') {
+                            totalCalory = totalIngredientPoint;
+                        } else {
+                            score *= totalIngredientPoint;
+                        }
+                    });
+
+                    if (score > highestScore && totalCalory === 500) {
+                        highestScore = score;
+                    }
+                    // console.log(combo);
+                });
+                return highestScore;
+            }
+
+            function solvePuzzle31(input) {
+                let lines = input.split('\n');
+                let aunt;
+                let tickerTape = {
+                    children: 3,
+                    cats: 7,
+                    samoyeds: 2,
+                    pomeranians: 3,
+                    akitas: 0,
+                    vizslas: 0,
+                    goldfish: 5,
+                    trees: 3,
+                    cars: 2,
+                    perfumes: 1,
+                };
+
+                for (let line of lines) {
+                    let idx = line.indexOf(': ');
+                    let name = line.slice(0, idx);
+                    let rest = line.slice(idx + 2);
+                    let parts = rest.split(', ');
+
+                    let correctPropertyCount = 0;
+
+                    for (let part of parts) {
+                        let [key, value] = part.split(': ');
+                        if (tickerTape[key] == value) {
+                            correctPropertyCount++;
+                        }
+                    }
+
+                    if (correctPropertyCount == 3) {
+                        aunt = name;
+                    }
+                }
+
+                console.log(aunt, 'corect aunt');
+
+                return aunt;
+            }
+
+            function solvePuzzle32(input) {
+                let lines = input.split('\n');
+                let aunt;
+                let tickerTape = {
+                    children: 3,
+                    cats: 7,
+                    samoyeds: 2,
+                    pomeranians: 3,
+                    akitas: 0,
+                    vizslas: 0,
+                    goldfish: 5,
+                    trees: 3,
+                    cars: 2,
+                    perfumes: 1,
+                };
+
+                for (let line of lines) {
+                    let idx = line.indexOf(': ');
+                    let name = line.slice(0, idx);
+                    let rest = line.slice(idx + 2);
+                    let parts = rest.split(', ');
+
+                    let correctPropertyCount = 0;
+
+                    for (let part of parts) {
+                        let [key, value] = part.split(': ');
+                        if (key == 'cats' || key == 'trees') {
+                            if (tickerTape[key] < value) {
+                                correctPropertyCount++;
+                            }
+                        } else if (key == 'pomeranians' || key == 'goldfish') {
+                            if (tickerTape[key] > value) {
+                                correctPropertyCount++;
+                            }
+                        } else {
+                            if (tickerTape[key] == value) {
+                                correctPropertyCount++;
+                            }
+                        }
+                    }
+
+                    if (correctPropertyCount == 3) {
+                        aunt = name;
+                    }
+                }
+
+                return aunt;
+            }
+
+            function solvePuzzle33(input) {
+                let containers = input.trim().split('\n').map(Number);
+                let target = 150;
+                let count = 0;
+
+                // recursion
+                function search(index, remaining) {
+                    console.log(index, remaining, containers[index])
+
+                    if (remaining === 0) {
+                        count++;
+                        return;
+                    }
+
+                    if (remaining < 0 || index >= containers.length) {
+                        return;
+                    }
+
+                    search(index + 1, remaining - containers[index]);
+
+                    search(index + 1, remaining);
+                }
+
+                search(0, target);
+
+                return count;
+            }
+
+            function solvePuzzle34(input) {
+                let containers = input.trim().split('\n').map(Number);
+                let target = 150;
+                let combinationCountForMinContainer = 0;
+                let containerCount = 0;
+                let minContainerCount = Infinity;
+
+                function search(index, remaining, countContainer) {
+
+                    if (countContainer) {
+                        containerCount++;
+                    }
+
+                    if (remaining === 0) {
+                        if (containerCount < minContainerCount) {
+                            minContainerCount = containerCount;
+                            combinationCountForMinContainer = 1;
+                        } else if (containerCount === minContainerCount) {
+                            combinationCountForMinContainer++;
+                        }
+                        containerCount--;
+                        return;
+                    }
+
+                    if (remaining < 0 || index >= containers.length) {
+                        containerCount--;
+                        return;
+                    }
+
+                    search(index + 1, remaining - containers[index], true);
+
+                    search(index + 1, remaining, false);
+                }
+
+                search(0, target, false);
+
+                return combinationCountForMinContainer;
+            }
+
+            function solvePuzzle35(input) {
+                let grid = input.split('\n').map(line => line.split(''));
+                let steps = 100;
+
+                function countOnNeighbors(x, y) {
+                    let count = 0;
+
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+
+                            if (dx === 0 && dy === 0) continue;
+
+                            let nx = x + dx;
+                            let ny = y + dy;
+
+                            if (
+                                nx >= 0 &&
+                                nx < grid.length &&
+                                ny >= 0 &&
+                                ny < grid[0].length &&
+                                grid[nx][ny] === '#'
+                            ) {
+                                count++;
+                            }
+                        }
+                    }
+
+                    return count;
+                }
+
+                function animate() {
+                    let newGrid = [];
+
+                    for (let i = 0; i < grid.length; i++) {
+                        newGrid[i] = [];
+
+                        for (let j = 0; j < grid[i].length; j++) {
+                            let neighbors = countOnNeighbors(i, j);
+
+                            if (grid[i][j] === '#') {
+                                // ON
+                                if (neighbors === 2 || neighbors === 3) {
+                                    newGrid[i][j] = '#';
+                                } else {
+                                    newGrid[i][j] = '.';
+                                }
+                            } else {
+                                // OFF
+                                if (neighbors === 3) {
+                                    newGrid[i][j] = '#';
+                                } else {
+                                    newGrid[i][j] = '.';
+                                }
+                            }
+                        }
+                    }
+
+                    grid = newGrid;
+                }
+
+                // Run steps
+                for (let s = 0; s < steps; s++) {
+                    animate();
+                }
+
+                // Count lights ON
+                let totalOn = 0;
+                for (let row of grid) {
+                    for (let cell of row) {
+                        if (cell === '#') totalOn++;
+                    }
+                }
+
+                console.log(grid.map(r => r.join('')).join('\n')); // see final grid
+                return totalOn;
+            }
+
+            function solvePuzzle36(input) {
+                let grid = input.split('\n').map(line => line.split(''));
+                let steps = 100;
+
+                function countOnNeighbors(x, y) {
+                    let count = 0;
+
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+
+                            if (dx === 0 && dy === 0) continue;
+
+                            let nx = x + dx;
+                            let ny = y + dy;
+
+                            if (
+                                nx >= 0 &&
+                                nx < grid.length &&
+                                ny >= 0 &&
+                                ny < grid[0].length &&
+                                grid[nx][ny] === '#'
+                            ) {
+                                count++;
+                            }
+                        }
+                    }
+
+                    return count;
+                }
+
+                function corner(i, j) {
+                    return (i === 0 || i === grid.length-1) && (j === 0 || j === grid[i].length-1);
+                }
+
+                function animate() {
+                    let newGrid = [];
+
+                    for (let i = 0; i < grid.length; i++) {
+                        newGrid[i] = [];
+
+                        for (let j = 0; j < grid[i].length; j++) {
+                            let neighbors = countOnNeighbors(i, j);
+
+                            if (corner(i, j)) {
+                                newGrid[i][j] = '#';
+                            } else if (grid[i][j] === '#') {
+                                // ON
+                                if (neighbors === 2 || neighbors === 3) {
+                                    newGrid[i][j] = '#';
+                                } else {
+                                    newGrid[i][j] = '.';
+                                }
+                            } else {
+                                // OFF
+                                if (neighbors === 3) {
+                                    newGrid[i][j] = '#';
+                                } else {
+                                    newGrid[i][j] = '.';
+                                }
+                            }
+                        }
+                    }
+
+                    grid = newGrid;
+                }
+
+                // Run steps
+                for (let s = 0; s < steps; s++) {
+                    animate();
+                }
+
+                // Count lights ON
+                let totalOn = 0;
+                for (let row of grid) {
+                    for (let cell of row) {
+                        if (cell === '#') totalOn++;
+                    }
+                }
+
+                console.log(grid.map(r => r.join('')).join('\n')); // see final grid
+                return totalOn;
+            }
+
+            function solvePuzzle37(input) {
+                let [firstPart, molecule] = input.split('\n\n');
+                let replacements = firstPart.split('\n').map(line => line.split(' => '));
+
+                for (let i = 0; i < replacements.length; i++) {
+                    let [from, to] = replacements[i];
+                    let index = molecule.indexOf(from);
+                    if (index !== -1) {
+                        let newMolecule = molecule.slice(0, index) + to + molecule.slice(index + from.length);
+                        console.log(newMolecule, 'new molecule', index, from);
+                    }
+                }
+
+                // console.log(replacements, 'part');
+                
+                return 'test';
+            }
+
+            // --- UI elements ---
+            const puzzleNumberEl = $('#puzzleNumber');
+            const puzzleEl = $('#puzzle');
+            const solveBtn = $('#solveBtn');
+            const resultText = $('#resultText');
+            const out = $('#out');
+            const extraInfo = $('#extraInfo');
+            const traceWrap = $('#traceWrap');
+            const traceContent = $('#traceContent');
+            const clearBtn = $('#clearBtn');
+            const copyBtn = $('#copyBtn');
+
+            // clear button
+            clearBtn.on('click', function () {
+                puzzleEl.val('');
+                resetOutput();
+            });
+
+            // copy button
+            copyBtn.on('click', function () {
+                const tempInput = $('<textarea>');
+                $('body').append(tempInput);
+                tempInput.val(resultText.text()).select();
+                document.execCommand('copy');
+                tempInput.remove();
+                
+                copyBtn.text('Copied!');
+                setTimeout(() => {
+                    copyBtn.text('Copy');
+                }, 1200);
+            });
+
+            // loading
+            function setSolveLoading(isLoading) {
+                const $btn = $('#solveBtn');
+                if (isLoading) {
+                    // cache original text for restore
+                    $btn.data('orig-text', $btn.html());
+                    $btn.prop('disabled', true);
+                    $btn.html('<span class="btn-spinner"><span class="spinner" aria-hidden="true"></span> Solving…</span>');
+                } else {
+                    $btn.prop('disabled', false);
+                    const orig = $btn.data('orig-text') || 'Solve';
+                    $btn.html(orig);
+                }
+            }
+
+            // solve button
+            solveBtn.off('click').on('click', function () {
+                resetOutput();
+
+                const puzzleNumber = parseInt(puzzleNumberEl.val());
+                const val = puzzleEl.val().trim();
+
+                if (!val) {
+                    alert('Please paste the puzzle string first.');
+                    return;
+                }
+
+                setSolveLoading(true);
+
+                let res;
+
+                if (puzzleNumber === 1) {
+                    res = solvePuzzle1(val);
+                } else if (puzzleNumber === 2) {
+                    res = solvePuzzle2(val);
+                } else if (puzzleNumber === 3) {
+                    res = solvePuzzle3(val);
+                } else if (puzzleNumber === 4) {
+                    res = solvePuzzle4(val);
+                } else if (puzzleNumber === 5) {
+                    res = solvePuzzle5(val);
+                } else if (puzzleNumber === 6) {
+                    res = solvePuzzle6(val);
+                } else if (puzzleNumber === 7) {
+                    res = solvePuzzle7(val);
+                } else if (puzzleNumber === 8) {
+                    res = solvePuzzle8(val);
+                } else if (puzzleNumber === 9) {
+                    res = solvePuzzle9(val);
+                } else if (puzzleNumber === 10) {
+                    res = solvePuzzle10(val);
+                } else if (puzzleNumber === 11) {
+                    res = solvePuzzle11(val);
+                } else if (puzzleNumber === 12) {
+                    res = solvePuzzle12(val);
+                } else if (puzzleNumber === 13) {
+                    res = solvePuzzle13(val);
+                } else if (puzzleNumber === 14) {
+                    res = solvePuzzle14(val);
+                } else if (puzzleNumber === 15) {
+                    res = solvePuzzle15(val);
+                } else if (puzzleNumber === 16) {
+                    res = solvePuzzle16(val);
+                } else if (puzzleNumber === 17) {
+                    res = solvePuzzle17(val);
+                } else if (puzzleNumber === 18) {
+                    res = solvePuzzle18(val);
+                } else if (puzzleNumber === 19) {
+                    res = solvePuzzle19(val);
+                } else if (puzzleNumber === 20) {
+                    res = solvePuzzle20(val);
+                } else if (puzzleNumber === 21) {
+                    res = solvePuzzle21(val);
+                } else if (puzzleNumber === 22) {
+                    res = solvePuzzle21('cqjxxyzz');
+                } else if (puzzleNumber === 23) {
+                    res = solvePuzzle23(val);
+                } else if (puzzleNumber === 24) {
+                    res = solvePuzzle24(val);
+                } else if (puzzleNumber === 25) {
+                    res = solvePuzzle25(val);
+                } else if (puzzleNumber === 26) {
+                    res = solvePuzzle26(val);
+                } else if (puzzleNumber === 27) {
+                    res = solvePuzzle27(val);
+                } else if (puzzleNumber === 28) {
+                    res = solvePuzzle28(val);
+                } else if (puzzleNumber === 29) {
+                    res = solvePuzzle29(val);
+                } else if (puzzleNumber === 30) {
+                    res = solvePuzzle30(val);
+                } else if (puzzleNumber === 31) {
+                    res = solvePuzzle31(val);
+                } else if (puzzleNumber === 32) {
+                    res = solvePuzzle32(val);
+                } else if (puzzleNumber === 33) {
+                    res = solvePuzzle33(val);
+                } else if (puzzleNumber === 34) {
+                    res = solvePuzzle34(val);
+                } else if (puzzleNumber === 35) {
+                    res = solvePuzzle35(val);
+                } else if (puzzleNumber === 36) {
+                    res = solvePuzzle36(val);
+                } else if (puzzleNumber === 37) {
+                    res = solvePuzzle37(val);
+                } else {
+                    res = solvePuzzle0(val);
+                }
+
+                out.show();
+                copyBtn.show();
+
+                // display answer
+                resultText.text(res);
+
+                setSolveLoading(false);
+
+                $('html, body').animate({
+                    scrollTop: out.offset().top
+                }, 500);
+            });
+
+            // reset
+            function resetOutput() {
+                out.hide();
+                copyBtn.hide();
+                resultText.text('');
+                extraInfo.text('');
+                traceContent.text('');
+                // traceWrap.hide();
+            }
+
+            // ctrl+enter support
+            puzzleEl.on('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    solveBtn.click();
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
