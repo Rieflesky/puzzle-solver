@@ -1701,6 +1701,38 @@
             }
 
             function solvePuzzle38(input) {
+                let [firstPart, molecule] = input.split('\n\n');
+                let replacements = firstPart.split('\n').map(line => line.split(' => '));
+                let i = 0;
+
+                replace(molecule, replacements);
+
+                // for (let i = 0; i < replacements.length; i++) {
+                //     let [to, from] = replacements[i];
+                //     let index = molecule.indexOf(from);
+                //     molecule = molecule.slice(0, index) + to + molecule.slice(index + from.length);
+
+                //     while (index !== -1) {
+                //         newMolecules.push(molecule.slice(0, index) + to + molecule.slice(index + from.length));
+                //         index = molecule.indexOf(from, index + 1);
+                //     }
+                // }
+
+                function replace(molecule, replacements) {
+                    for (let i = 0; i < replacements.length; i++) {
+                        let [to, from] = replacements[i]; //e -> H
+                        let index = molecule.indexOf(from); //1
+                        molecule = molecule.slice(0, index) + to + molecule.slice(index + from.length); //eOe
+                        replace(molecule, replacements);
+                    }
+
+                    //     // while (index !== -1) {
+                    //     //     newMolecules.push(molecule.slice(0, index) + to + molecule.slice(index + from.length));
+                    //     //     index = molecule.indexOf(from, index + 1);
+                    //     // }
+                }
+
+                return 'answer not ready, Dev still working on it';
                 
             }
 
